@@ -1,0 +1,59 @@
+name: Publish Moment90 website
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [.github/workflows/static.yml]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+      - name: Download and verify the approved demo build
+        shell: bash
+        run: |
+          curl --fail --location --retry 3 --max-time 420 --output moment90.zip 'https://drive.usercontent.google.com/download?id=1yn8ghUvVuiVwwRCLKsgQZPUPQqaUVkiP&export=download&confirm=t'
+          echo 'bf8172af919b7316e25ddb47e9639b11605c49255aa53fd0c54c87408528f5d4  moment90.zip' | sha256sum --check
+          unzip -q moment90.zip 'Moment90-20261119/index.html' 'Moment90-20261119/studio/*' -d staging
+          mv staging/Moment90-20261119 public
+          touch public/.nojekyll
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('public/studio/contract.js')
+          old = "export const PUBLIC_BASE = 'https://bnj-apl.github.io/goal-moment-3d/studio/';"
+          text = p.read_text(encoding='utf-8')
+          assert old in text
+          p.write_text(text.replace(old, 'export const PUBLIC_BASE = new URL("./", import.meta.url).href;'), encoding='utf-8')
+          PY
+          test -s public/index.html
+          test -s public/studio/index.html
+          test -s public/studio/bayern/muller-journey.html
+      - name: Upload website files
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: public
+
+  deploy:
+    needs: package
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Publish the website
+        id: deployment
+        uses: actions/deploy-pages@v4
