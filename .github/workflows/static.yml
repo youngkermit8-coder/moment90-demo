@@ -40,7 +40,7 @@ jobs:
           old = "export const PUBLIC_BASE = 'https://bnj-apl.github.io/goal-moment-3d/studio/';"
           text = p.read_text(encoding='utf-8')
           assert old in text
-          p.write_text(text.replace(old, 'export const PUBLIC_BASE = new URL("./", import.meta.url).href;'), encoding='utf-8')
+          p.write_text(text.replace(old, 'export const PUBLIC_BASE = import.meta.url.startsWith("https:") ? new URL("./", import.meta.url).href : "https://youngkermit8-coder.github.io/moment90-demo/studio/";'), encoding='utf-8')
           PY
           test -s public/index.html
           test -s public/studio/index.html
